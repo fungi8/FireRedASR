@@ -1,6 +1,18 @@
 from fireredasr.models.fireredasr import FireRedAsr
 
-batch_uttid = ["BAC009S0764W0121"]
+batch_uttids = ["BAC009S0764W0121",
+               "BAC009S0764W0122",
+               "BAC009S0764W0123",
+               "BAC009S0764W0124",
+               "BAC009S0764W0125",
+               "BAC009S0764W0126",
+               "BAC009S0764W0127",
+               "BAC009S0764W0128",
+               "BAC009S0764W012s",
+               "BAC009S0764W012w",
+               "BAC009S0764W012x",
+               "BAC009S0764W012z",
+               "BAC009S0764W012c"]
 batch_wav_path_list = ["examples/wav/multidomain_sample1.wav",
                   "examples/wav/multidomain_sample2.wav",
                   "examples/wav/multidomain_sample3.wav",
@@ -27,10 +39,11 @@ params = {
         "eos_penalty": 1.0
     }
 
-for batch_wav_path in batch_wav_path_list:
+for i in range(len(batch_wav_path_list)):
+    print("Batch wav path: {}".format(batch_wav_path_list[i]), "uttid: {}".format(batch_uttids[i]))
     result = model.transcribe(
-        batch_uttid,
-        batch_wav_path,
+        batch_uttid = batch_uttids[i],
+        batch_wav_path = batch_wav_path_list[i],
         args = params
     )
     print(result)
