@@ -1,7 +1,7 @@
 from fireredasr.models.fireredasr import FireRedAsr
 
 batch_uttid = ["BAC009S0764W0121"]
-batch_wav_path = ["examples/wav/multidomain_sample1.wav",
+batch_wav_path_list = ["examples/wav/multidomain_sample1.wav",
                   "examples/wav/multidomain_sample2.wav",
                   "examples/wav/multidomain_sample3.wav",
                   "examples/wav/multidomain_sample4.wav",
@@ -17,10 +17,7 @@ batch_wav_path = ["examples/wav/multidomain_sample1.wav",
 
 # FireRedASR-AED
 model = FireRedAsr.from_pretrained("aed", "pretrained_models/FireRedASR-AED-L")
-results = model.transcribe(
-    batch_uttid,
-    batch_wav_path,
-    {
+params = {
         "use_gpu": 1,
         "beam_size": 3,
         "nbest": 1,
@@ -29,5 +26,11 @@ results = model.transcribe(
         "aed_length_penalty": 0.6,
         "eos_penalty": 1.0
     }
-)
-print(results)
+
+for batch_wav_path in batch_wav_path_list:
+    result = model.transcribe(
+        batch_uttid,
+        batch_wav_path,
+        args = params
+    )
+    print(result)
