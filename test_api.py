@@ -6,7 +6,7 @@ import argparse
 import json
 import time
 
-def test_asr_api(url, audio_url, use_gpu=False, beam_size=3):
+def test_asr_api(url, audio_url, use_gpu=1, beam_size=3):
     """测试ASR API"""
     print(f"正在发送请求到 {url}，处理音频 {audio_url}...")
     
@@ -52,7 +52,7 @@ if __name__ == "__main__":
                         help="API服务器URL，默认为 http://localhost:5000/api/asr")
     parser.add_argument("--audio", required=True, 
                         help="要处理的音频文件URL")
-    parser.add_argument("--gpu", action="store_true", 
+    parser.add_argument("--gpu", type=int, default=1,
                         help="是否使用GPU加速")
     parser.add_argument("--beam", type=int, default=3, 
                         help="Beam搜索大小，默认为3")

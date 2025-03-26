@@ -138,16 +138,17 @@ def asr_transcribe():
         
         # 根据是否为立体声进行不同处理
         if audio_info["is_stereo"]:
+            print("audio_info", audio_info)
             # 处理左声道
             left_results = model.transcribe(
-                [f"{unique_id}_left"],
+                [f"{unique_id}"],
                 [audio_info["left_path"]],
                 transcribe_args
             )
             
             # 处理右声道
             right_results = model.transcribe(
-                [f"{unique_id}_right"],
+                [f"{unique_id}"],
                 [audio_info["right_path"]],
                 transcribe_args
             )
@@ -182,7 +183,8 @@ def asr_transcribe():
             
             # 清理临时文件
             cleanup_files([audio_info["original_path"]])
-        
+
+        print("result", result)
         return jsonify(result)
     
     except Exception as e:
@@ -191,10 +193,10 @@ def asr_transcribe():
 
 if __name__ == '__main__':
     # 预加载模型
-    # try:
-    #     load_model()
-    # except Exception as e:
-    #     logger.error(f"启动服务时无法加载模型: {str(e)}")
+    try:
+        load_model()
+    except Exception as e:
+        logger.error(f"启动服务时无法加载模型: {str(e)}")
     
     # 启动Flask服务
     app.run(host='0.0.0.0', port=5000, debug=False) 
