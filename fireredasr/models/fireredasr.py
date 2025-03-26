@@ -13,12 +13,14 @@ from fireredasr.tokenizer.llm_tokenizer import LlmTokenizerWrapper
 class FireRedAsr:
     @classmethod
     def from_pretrained(cls, asr_type, model_dir):
+        print("from_pretrained load model start asr_type:", asr_type, "model_dir:", model_dir)
         assert asr_type in ["aed", "llm"]
-
         cmvn_path = os.path.join(model_dir, "cmvn.ark")
+        print("from_pretrained load model find cmvn_path", cmvn_path)
         feat_extractor = ASRFeatExtractor(cmvn_path)
-
+        print("from_pretrained load model feat_extractor", feat_extractor)
         if asr_type == "aed":
+            print("from_pretrained load model aed")
             model_path = os.path.join(model_dir, "model.pth.tar")
             dict_path =os.path.join(model_dir, "dict.txt")
             spm_model = os.path.join(model_dir, "train_bpe1000.model")
@@ -41,6 +43,7 @@ class FireRedAsr:
 
     @torch.no_grad()
     def transcribe(self, batch_uttid, batch_wav_path, args={}):
+        print("transcribe start", batch_uttid, batch_wav_path, args)
         feats, lengths, durs = self.feat_extractor(batch_wav_path)
         total_dur = sum(durs)
         if args.get("use_gpu", False):
