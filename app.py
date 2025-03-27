@@ -1,14 +1,11 @@
 import os
 import uuid
-import json
 import requests
 import tempfile
 import logging
 from flask import Flask, request, jsonify
 import soundfile as sf
-import numpy as np
 import torch
-from waitress import serve
 from fireredasr.models.fireredasr import FireRedAsr
 
 
@@ -35,15 +32,6 @@ def load_model():
             logger.info("ASR模型加载成功")
             # FP16 减少内存占用
             if torch.cuda.is_available():
-                # 尝试scripted
-                try:
-                    scripted_model = torch.jit.script(asr_model.model)
-                    scripted_model.save("pretrained_models/FireRedASR-AED-L/scripted_model.pt")
-                    # 重新加载 script 后的模型，再转换回 FP16
-                    asr_model.model = torch.jit.load("pretrained_models/FireRedASR-AED-L/scripted_model.pt").half()
-                    logger.info("asr scripted loaded successfully")
-                except Exception as e:
-                    logger.error(f"model scripted fail: {str(e)}")
                 # 尝试 half
                 try:
                     asr_model.model = asr_model.model.half()
@@ -153,8 +141,8 @@ def asr_transcribe():
             "beam_size": beam_size,
             "nbest": 1,
             "decode_max_len": 0,
-            "softmax_smoothing": 1.25,
-            "aed_length_penalty": 0.6,
+            "softmax_smoothing": 1.0,
+            "aed_length_penalty": 0.0,
             "eos_penalty": 1.0
         }
         
@@ -218,5 +206,4 @@ if __name__ == '__main__':
         load_model()
     except Exception as e:
         logger.error(f"启动服务时无法加载模型: {str(e)}")
-
-    serve(app, host='0.0.0.0', port=5000, threads=4)
+    app.run(host='0.0.0.0', port=5000)
