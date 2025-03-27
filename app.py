@@ -35,20 +35,21 @@ def load_model():
             logger.info("ASR模型加载成功")
             # FP16 减少内存占用
             if torch.cuda.is_available():
-                asr_model.model = asr_model.model.half()
-                logger.info("asr half loaded successfully")
+                # 尝试scripted
                 try:
-                    # 先转换回 float32 再 script，避免 torch.jit.script 失败
-                    scripted_model = torch.jit.script(asr_model.model.float())
+                    scripted_model = torch.jit.script(asr_model.model)
                     scripted_model.save("pretrained_models/FireRedASR-AED-L/scripted_model.pt")
-
                     # 重新加载 script 后的模型，再转换回 FP16
                     asr_model.model = torch.jit.load("pretrained_models/FireRedASR-AED-L/scripted_model.pt").half()
-
-                    logger.info("asr scripted_model loaded successfully")
-
+                    logger.info("asr scripted loaded successfully")
                 except Exception as e:
-                    logger.error(f"模型脚本化失败: {str(e)}")
+                    logger.error(f"model scripted fail: {str(e)}")
+                # 尝试 half
+                try:
+                    asr_model.model = asr_model.model.half()
+                    logger.info("asr half loaded successfully")
+                except Exception as e:
+                    logger.error(f"model half fail: {str(e)}")
 
         except Exception as e:
             logger.error(f"模型加载失败: {str(e)}")
