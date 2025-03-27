@@ -6,7 +6,16 @@ import argparse
 import json
 import time
 
-def test_asr_api(url, audio_url, use_gpu=1, beam_size=3):
+def test_asr():
+    url_list = ["https://sto-servicequality.oss-cn-shanghai.aliyuncs.com/f1b6f83e055241c39155f9edce89a93b.wav?Expires=1743050004&OSSAccessKeyId=LTAI5t5YHQ1jJR3oCK9ZhMpd&Signature=KXOC6tkEqmgmcDb88mzhGhvCl8I%3D",
+                "https://sto-servicequality.oss-cn-shanghai.aliyuncs.com/f1b6f83e055241c39155f9edce89a93b.wav?Expires=1743050004&OSSAccessKeyId=LTAI5t5YHQ1jJR3oCK9ZhMpd&Signature=KXOC6tkEqmgmcDb88mzhGhvCl8I%3D",
+                "https://sto-servicequality.oss-cn-shanghai.aliyuncs.com/f1b6f83e055241c39155f9edce89a93b.wav?Expires=1743050004&OSSAccessKeyId=LTAI5t5YHQ1jJR3oCK9ZhMpd&Signature=KXOC6tkEqmgmcDb88mzhGhvCl8I%3D",
+                "https://sto-servicequality.oss-cn-shanghai.aliyuncs.com/f1b6f83e055241c39155f9edce89a93b.wav?Expires=1743050004&OSSAccessKeyId=LTAI5t5YHQ1jJR3oCK9ZhMpd&Signature=KXOC6tkEqmgmcDb88mzhGhvCl8I%3D",
+                "https://sto-servicequality.oss-cn-shanghai.aliyuncs.com/f1b6f83e055241c39155f9edce89a93b.wav?Expires=1743050004&OSSAccessKeyId=LTAI5t5YHQ1jJR3oCK9ZhMpd&Signature=KXOC6tkEqmgmcDb88mzhGhvCl8I%3D"]
+    for url in url_list:
+        test_asr_api("http://localhost:5000/api/asr", url, 1, 1)
+
+def test_asr_api(url, audio_url, use_gpu=1, beam_size=1):
     """测试ASR API"""
     print(f"正在发送请求到 {url}，处理音频 {audio_url}...")
     
@@ -47,16 +56,17 @@ def test_asr_api(url, audio_url, use_gpu=1, beam_size=3):
         print("错误信息:", response.text)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="测试FireRedASR Web服务API")
-    parser.add_argument("--server", default="http://localhost:5000/api/asr", 
-                        help="API服务器URL，默认为 http://localhost:5000/api/asr")
-    parser.add_argument("--audio", required=True, 
-                        help="要处理的音频文件URL")
-    parser.add_argument("--gpu", type=int, default=1,
-                        help="是否使用GPU加速")
-    parser.add_argument("--beam", type=int, default=3, 
-                        help="Beam搜索大小，默认为3")
-    
-    args = parser.parse_args()
-    
-    test_asr_api(args.server, args.audio, args.gpu, args.beam) 
+    test_asr()
+    # parser = argparse.ArgumentParser(description="测试FireRedASR Web服务API")
+    # parser.add_argument("--server", default="http://localhost:5000/api/asr",
+    #                     help="API服务器URL，默认为 http://localhost:5000/api/asr")
+    # parser.add_argument("--audio", required=True,
+    #                     help="要处理的音频文件URL")
+    # parser.add_argument("--gpu", type=int, default=1,
+    #                     help="是否使用GPU加速")
+    # parser.add_argument("--beam", type=int, default=1,
+    #                     help="Beam搜索大小，默认为3")
+    #
+    # args = parser.parse_args()
+    #
+    # test_asr_api(args.server, args.audio, args.gpu, args.beam)
