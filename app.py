@@ -29,7 +29,6 @@ def load_model():
     global asr_model
     if asr_model is None:
         try:
-            optimized_model_path = os.path.join(model_dir, "model_optimized.pt")
             # 从预训练模型目录加载模型
             model_dir = "pretrained_models/FireRedASR-AED-L"
             asr_model = FireRedAsr.from_pretrained("aed", model_dir)
@@ -37,12 +36,15 @@ def load_model():
             # FP16 减少内存占用
             if torch.cuda.is_available():
                 asr_model.model = asr_model.model.half()
+                logger.info("asr half loaded successfully")
                 try:
                     scripted_model = torch.jit.script(asr_model.model)
-                    scripted_model.save(optimized_model_path)
-                    asr_model.model = torch.jit.load(optimized_model_path)
+                    scripted_model.save("pretrained_models/FireRedASR-AED-L/scripted_model.pt")
+                    asr_model.model = torch.jit.load("pretrained_models/FireRedASR-AED-L/scripted_model.pt")
+                    logger.info("asr scripted_model loaded successfully")
                 except Exception as e:
                     logger.error(f"模型脚本化失败: {str(e)}")
+
         except Exception as e:
             logger.error(f"模型加载失败: {str(e)}")
             raise e
