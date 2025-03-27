@@ -47,14 +47,21 @@ class FireRedAsr:
         feats, lengths, durs = self.feat_extractor(batch_wav_path)
         total_dur = sum(durs)
         if args.get("use_gpu", False):
-            feats, lengths = feats.cuda(), lengths.cuda()
-            self.model.cuda()
+            feats, lengths = feats.half().cuda(), lengths.cuda().long()
+            self.model.half().cuda()
+
+            # 让 BN 层仍然是 float32，避免数值不稳定
+            for module in self.model.modules():
+                if isinstance(module, torch.nn.BatchNorm1d) or isinstance(module, torch.nn.BatchNorm2d):
+                    module.float()
         else:
             self.model.cpu()
 
+        if feats.size(0) == 0:
+            return [{"error": "Empty input"}]
+
         if self.asr_type == "aed":
             start_time = time.time()
-
             hyps = self.model.transcribe(
                 feats, lengths,
                 args.get("beam_size", 1),
@@ -64,29 +71,26 @@ class FireRedAsr:
                 args.get("aed_length_penalty", 0.0),
                 args.get("eos_penalty", 1.0)
             )
-
             elapsed = time.time() - start_time
-            rtf= elapsed / total_dur if total_dur > 0 else 0
+            rtf = elapsed / total_dur if total_dur > 0 else 0
 
             results = []
             for uttid, wav, hyp in zip(batch_uttid, batch_wav_path, hyps):
                 hyp = hyp[0]  # only return 1-best
                 hyp_ids = [int(id) for id in hyp["yseq"].cpu()]
                 text = self.tokenizer.detokenize(hyp_ids)
-                results.append({"uttid": uttid, "text": text, "wav": wav,
-                    "rtf": f"{rtf:.4f}"})
+                results.append({"uttid": uttid, "text": text, "wav": wav, "rtf": f"{rtf:.4f}"})
             return results
 
         elif self.asr_type == "llm":
             input_ids, attention_mask, _, _ = \
                 LlmTokenizerWrapper.preprocess_texts(
-                    origin_texts=[""]*feats.size(0), tokenizer=self.tokenizer,
+                    origin_texts=[""] * feats.size(0), tokenizer=self.tokenizer,
                     max_len=128, decode=True)
             if args.get("use_gpu", False):
                 input_ids = input_ids.cuda()
                 attention_mask = attention_mask.cuda()
             start_time = time.time()
-
             generated_ids = self.model.transcribe(
                 feats, lengths, input_ids, attention_mask,
                 args.get("beam_size", 1),
@@ -96,17 +100,14 @@ class FireRedAsr:
                 args.get("llm_length_penalty", 0.0),
                 args.get("temperature", 1.0)
             )
-
             elapsed = time.time() - start_time
-            rtf= elapsed / total_dur if total_dur > 0 else 0
-            texts = self.tokenizer.batch_decode(generated_ids,
-                                                skip_special_tokens=True)
+            rtf = elapsed / total_dur if total_dur > 0 else 0
+            texts = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+
             results = []
             for uttid, wav, text in zip(batch_uttid, batch_wav_path, texts):
-                results.append({"uttid": uttid, "text": text, "wav": wav,
-                                "rtf": f"{rtf:.4f}"})
+                results.append({"uttid": uttid, "text": text, "wav": wav, "rtf": f"{rtf:.4f}"})
             return results
-
 
 
 def load_fireredasr_aed_model(model_path):
