@@ -7,8 +7,14 @@ import logging
 from flask import Flask, request, jsonify
 import soundfile as sf
 import numpy as np
+import torch
+from waitress import serve
 from fireredasr.models.fireredasr import FireRedAsr
 
+
+# 在应用启动时配置CUDA
+torch.backends.cudnn.benchmark = True  # 启用cuDNN自动调优
+torch.backends.cudnn.deterministic = False  # 关闭确定性模式以提高速度
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -23,10 +29,20 @@ def load_model():
     global asr_model
     if asr_model is None:
         try:
+            optimized_model_path = os.path.join(model_dir, "model_optimized.pt")
             # 从预训练模型目录加载模型
             model_dir = "pretrained_models/FireRedASR-AED-L"
             asr_model = FireRedAsr.from_pretrained("aed", model_dir)
             logger.info("ASR模型加载成功")
+            # FP16 减少内存占用
+            if torch.cuda.is_available():
+                asr_model.model = asr_model.model.half()
+                try:
+                    scripted_model = torch.jit.script(asr_model.model)
+                    scripted_model.save(optimized_model_path)
+                    asr_model.model = torch.jit.load(optimized_model_path)
+                except Exception as e:
+                    logger.error(f"模型脚本化失败: {str(e)}")
         except Exception as e:
             logger.error(f"模型加载失败: {str(e)}")
             raise e
@@ -138,35 +154,32 @@ def asr_transcribe():
         
         # 根据是否为立体声进行不同处理
         if audio_info["is_stereo"]:
-            print("audio_info", audio_info)
-            # 处理左声道
-            left_results = model.transcribe(
-                [f"{unique_id}"],
-                [audio_info["left_path"]],
-                transcribe_args
-            )
-            
-            # 处理右声道
-            right_results = model.transcribe(
-                [f"{unique_id}"],
-                [audio_info["right_path"]],
-                transcribe_args
-            )
-            
-            # 合并结果
-            result = {
-                "is_stereo": True,
-                "left_channel": left_results[0],
-                "right_channel": right_results[0],
-                "rtf": left_results[0]["rtf"]  # 使用左声道的RTF作为整体RTF
-            }
-            
-            # 清理临时文件
-            cleanup_files([
-                audio_info["original_path"],
-                audio_info["left_path"],
-                audio_info["right_path"]
-            ])
+            # 创建两个线程并行处理左右声道
+            from concurrent.futures import ThreadPoolExecutor
+
+            def process_channel(channel_path, channel_id):
+                return model.transcribe([f"{unique_id}_{channel_id}"], [channel_path], transcribe_args)
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [
+                    executor.submit(process_channel, audio_info["left_path"], "left"),
+                    executor.submit(process_channel, audio_info["right_path"], "right")
+                ]
+                results = [future.result() for future in futures]
+
+                # 合并结果
+                result = {
+                    "is_stereo": True,
+                    "left_channel": results[0],
+                    "right_channel": results[1],
+                    "rtf": results[0]["rtf"]
+                }
+                # 清理临时文件
+                cleanup_files([
+                    audio_info["original_path"],
+                    audio_info["left_path"],
+                    audio_info["right_path"]
+                ])
         else:
             # 单声道处理
             transcribe_results = model.transcribe(
@@ -197,6 +210,5 @@ if __name__ == '__main__':
         load_model()
     except Exception as e:
         logger.error(f"启动服务时无法加载模型: {str(e)}")
-    
-    # 启动Flask服务
-    app.run(host='0.0.0.0', port=5000, debug=False) 
+
+    serve(app, host='0.0.0.0', port=5000, threads=4)
