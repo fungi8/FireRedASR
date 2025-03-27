@@ -38,10 +38,15 @@ def load_model():
                 asr_model.model = asr_model.model.half()
                 logger.info("asr half loaded successfully")
                 try:
-                    scripted_model = torch.jit.script(asr_model.model)
+                    # 先转换回 float32 再 script，避免 torch.jit.script 失败
+                    scripted_model = torch.jit.script(asr_model.model.float())
                     scripted_model.save("pretrained_models/FireRedASR-AED-L/scripted_model.pt")
-                    asr_model.model = torch.jit.load("pretrained_models/FireRedASR-AED-L/scripted_model.pt")
+
+                    # 重新加载 script 后的模型，再转换回 FP16
+                    asr_model.model = torch.jit.load("pretrained_models/FireRedASR-AED-L/scripted_model.pt").half()
+
                     logger.info("asr scripted_model loaded successfully")
+
                 except Exception as e:
                     logger.error(f"模型脚本化失败: {str(e)}")
 
