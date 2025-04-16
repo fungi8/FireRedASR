@@ -49,8 +49,8 @@ from fireredasr.models.fireredasr import FireRedAsr
 
 
 
-batch_uttid = ["班前会录音"]
-batch_wav_path = ["examples/wav/班前会录音.mp3"]
+batch_uttid = ["kunluntest"]
+batch_wav_path = ["examples/wav/kunluntest.wav"]
 
 # FireRedASR-AED
 model = FireRedAsr.from_pretrained("aed", "pretrained_models/FireRedASR-AED-L")
